@@ -90,7 +90,7 @@ class Dispatcher implements MiddlewareInterface
 
         if (!class_exists($controllerClassName, false)) {
 
-            $loaderEnabled = $this->getOption('loader.enabled', true);
+            $loaderEnabled = $this->getOption('loader.enabled', false);
             $loaderPath = $this->getOption('loader.path', getcwd().'/controllers');
             $loaderPattern = $this->getOption('loader.fileNamePattern', null);
             $loader = null;
