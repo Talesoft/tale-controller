@@ -1,10 +1,10 @@
 {
-    "name": "talesoft/tale-router",
+    "name": "talesoft/tale-controller",
     "type": "library",
-    "keywords": ["router"],
-    "description": "A router middleware for the Tale Runtime",
+    "keywords": ["controller", "dispatcher"],
+    "description": "A controller middleware for talesoft/tale-app",
     "license": "MIT",
-    "homepage": "http://docs.talesoft.io/tale-framework/tale/router",
+    "homepage": "http://docs.talesoft.io/tale-framework/tale/controller",
     "authors": [
         {
             "name": "Talesoft",
