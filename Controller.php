@@ -88,7 +88,7 @@ class Controller implements MiddlewareInterface
                     "doesn't return a ".ResponseInterface::class." instance"
                 );
 
-            return $next($this->request, $result);
+            return $result;
         }
 
         return $next($this->request, $this->response);
