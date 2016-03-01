@@ -10,18 +10,18 @@ class OtherController extends Controller
     public function indexAction()
     {
 
-        return $this->getResponse()->withStatus(100);
+        return $this->response->withStatus(100);
     }
 
     public function fiveAction()
     {
 
-        return $this->getResponse()->withStatus(101);
+        return $this->response->withStatus(101);
     }
 
     public function sixAction()
     {
 
-        return $this->getResponse()->withStatus(102);
+        return $this->response->withStatus(102);
     }
 }

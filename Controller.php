@@ -2,8 +2,8 @@
 
 namespace Tale;
 
+use Psr\Http\Message\ResponseInterface;
 use Tale\Config\DelegateTrait;
-use Tale\Controller\Dispatcher;
 use Tale\Http\Method;
 use Tale\Http\Runtime\MiddlewareInterface;
 use Tale\Http\Runtime\MiddlewareTrait;
@@ -13,14 +13,12 @@ class Controller implements MiddlewareInterface
     use MiddlewareTrait;
     use DelegateTrait;
 
-    private $_app;
-    private $_dispatcher;
+    protected $app;
 
-    public function __construct(App $app, Dispatcher $dispatcher = null)
+    public function __construct(App $app)
     {
 
-        $this->_app = $app;
-        $this->_dispatcher = $dispatcher;
+        $this->app = $app;
     }
 
     /**
@@ -28,15 +26,8 @@ class Controller implements MiddlewareInterface
      */
     public function getApp()
     {
-        return $this->_app;
-    }
 
-    /**
-     * @return Dispatcher
-     */
-    public function getDispatcher()
-    {
-        return $this->_dispatcher;
+        return $this->app;
     }
 
     protected function initialize()
@@ -51,35 +42,26 @@ class Controller implements MiddlewareInterface
         return null;
     }
 
-    protected function handleRequest()
+    protected function handleRequest(callable $next)
     {
 
-        $req = $this->getRequest();
-        $action = $req->getAttribute('action', $this->_app->getOption(
-            'defaultAction',
-            'index'
-        ));
-        $id = $req->getAttribute('id', $this->_app->getOption(
-            'defaultId',
-            null
-        ));
-        $format = $req->getAttribute('format', $this->_app->getOption(
-            'defaultFormat',
-            'html'
-        ));
+        $req = $this->request;
+        $action = $req->getAttribute('action', $this->getOption('defaultAction', 'index'));
+        $id = $req->getAttribute('id', $this->getOption('defaultId', null));
+        $format = $req->getAttribute('format', $this->getOption('defaultFormat', 'html'));
 
         //Make sure the values are correctly formatted
         if (Inflector::canonicalize($action) !== $action
             || Inflector::canonicalize($format) !== $format
             || (!is_null($id) && !is_numeric($id) && Inflector::canonicalize($id) !== $id))
-            return $this->handleNext();
+            return $next($this->request, $this->response);
 
-        $getActionPattern = $this->_app->getOption('getActionPattern', 'get%sAction');
-        $getActionInflection = $this->_app->getOption('getActionInflection', [Inflector::class, 'camelize']);
-        $postActionPattern = $this->_app->getOption('postActionPattern', 'post%sAction');
-        $postActionInflection = $this->_app->getOption('postActionInflection', [Inflector::class, 'camelize']);
-        $actionPattern = $this->_app->getOption('actionPattern', '%sAction');
-        $actionInflection = $this->_app->getOption('actionInflection', [Inflector::class, 'variablize']);
+        $getActionPattern = $this->getOption('getActionPattern', 'get%sAction');
+        $getActionInflection = $this->getOption('getActionInflection', [Inflector::class, 'camelize']);
+        $postActionPattern = $this->getOption('postActionPattern', 'post%sAction');
+        $postActionInflection = $this->getOption('postActionInflection', [Inflector::class, 'camelize']);
+        $actionPattern = $this->getOption('actionPattern', '%sAction');
+        $actionInflection = $this->getOption('actionInflection', [Inflector::class, 'variablize']);
 
         $getMethodName = sprintf($getActionPattern, call_user_func($getActionInflection, $action));
         $postMethodName = sprintf($postActionPattern, call_user_func($postActionInflection, $action));
@@ -94,18 +76,22 @@ class Controller implements MiddlewareInterface
             $foundMethodName = $methodName;
 
         if (!$foundMethodName)
-            return $this->handleNext();
+            return $next($this->request, $this->response);
 
-        if ($result = $this->initialize())
-            return $result;
+        if (($result = $this->initialize())
+            || ($result = call_user_func([$this, $foundMethodName], $id))
+            || ($result = $this->finalize())) {
 
-        if ($result = call_user_func([$this, $foundMethodName], $id))
-            return $result;
+            if (!($result instanceof ResponseInterface))
+                throw new \RuntimeException(
+                    "Failed to dispatch controller: Called action $foundMethodName ".
+                    "doesn't return a ".ResponseInterface::class." instance"
+                );
 
-        if ($result = $this->finalize())
-            return $result;
+            return $next($this->request, $result);
+        }
 
-        return $this->handleNext();
+        return $next($this->request, $this->response);
     }
 
     protected function getOptionNameSpace()
@@ -117,6 +103,6 @@ class Controller implements MiddlewareInterface
     protected function getTargetConfigurableObject()
     {
 
-        return $this->_app;
+        return $this->app;
     }
 }

@@ -13,13 +13,13 @@ class SingleController extends Controller
     public function indexAction()
     {
 
-        return $this->getResponse()->withStatus(100);
+        return $this->response->withStatus(100);
     }
 
     public function twoAction()
     {
 
-        return $this->getResponse()->withStatus(101);
+        return $this->response->withStatus(101);
     }
 }
 
@@ -41,7 +41,7 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(101, $response->getStatusCode());
     }
 
-    public function testRouting()
+    public function testDispatcher()
     {
 
         $app = new App([
@@ -51,6 +51,7 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
                     'adm' => 'Admin'
                 ],
                 'loader' => [
+                    'enabled' => true,
                     'path' => __DIR__.'/test-app/controllers'
                 ]
             ]

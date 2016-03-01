@@ -17,12 +17,12 @@ class Dispatcher implements MiddlewareInterface
     use MiddlewareTrait;
     use DelegateTrait;
 
-    private $_app;
+    private $app;
 
     public function __construct(App $app)
     {
 
-        $this->_app = $app;
+        $this->app = $app;
     }
 
     /**
@@ -30,14 +30,14 @@ class Dispatcher implements MiddlewareInterface
      */
     public function getApp()
     {
-        return $this->_app;
+        return $this->app;
     }
 
     public function dispatchRequest(ServerRequestInterface $request = null, ResponseInterface $response = null)
     {
 
-        $request = $request ?: $this->getRequest();
-        $response = $response ?: $this->getResponse();
+        $request = $request ?: $this->request;
+        $response = $response ?: $this->response;
 
         if (!$request || !$response)
             throw new \RuntimeException(
@@ -47,15 +47,8 @@ class Dispatcher implements MiddlewareInterface
 
         $nameSpace = trim($this->getOption('nameSpace', ''), '\\');
         $modules = $this->getOption('modules', []);
-
-        $module = $request->getAttribute('module', $this->getOption(
-            'defaultModule',
-            ''
-        ));
-        $controller = $request->getAttribute('controller', $this->getOption(
-            'defaultController',
-            'index'
-        ));
+        $module = $request->getAttribute('module', $this->getOption('defaultModule', ''));
+        $controller = $request->getAttribute('controller', $this->getOption('defaultController', 'index'));
 
         //Make sure the values are correctly formatted
         if (Inflector::canonicalize($module) !== $module
@@ -78,30 +71,23 @@ class Dispatcher implements MiddlewareInterface
         if (!empty($nameSpace))
             $controllerClassName = "$nameSpace\\$controllerClassName";
 
-        if (!class_exists($controllerClassName, false)) {
+        $loader = null;
+        if (!class_exists($controllerClassName, false) && $this->getOption('loader.enabled', false)) {
 
-            $loaderEnabled = $this->getOption('loader.enabled', false);
             $loaderPath = $this->getOption('loader.path', getcwd().'/controllers');
             $loaderPattern = $this->getOption('loader.pattern', null);
-            $loader = null;
 
-            if ($loaderEnabled) {
-
-                $loader = new Loader($loaderPath, empty($nameSpace) ? null : $nameSpace, $loaderPattern);
-                $loader->register();
-            }
-
-            if (!class_exists($controllerClassName) || !is_a($controllerClassName, Controller::class, true))
-                return $response;
-
-            if ($loaderEnabled) {
-
-                $loader->unregister();
-                $loader = null;
-            }
+            $loader = new Loader($loaderPath, empty($nameSpace) ? null : $nameSpace, $loaderPattern);
+            $loader->register();
         }
 
-        $this->_app->prepend($controllerClassName);
+        if (!class_exists($controllerClassName) || !is_a($controllerClassName, Controller::class, true))
+            return $response;
+
+        if ($loader)
+            $loader->unregister();
+
+        $this->app->prepend($controllerClassName);
         return $response;
     }
 
@@ -113,7 +99,7 @@ class Dispatcher implements MiddlewareInterface
     )
     {
 
-        $request = $request ?: $this->getRequest();
+        $request = $request ?: $this->request;
 
         if (!$preserve)
             $attributes = array_replace([
@@ -130,10 +116,10 @@ class Dispatcher implements MiddlewareInterface
         return $this->dispatchRequest($request, $response);
     }
 
-    protected function handleRequest()
+    protected function handleRequest(callable $next)
     {
 
-        return $this->handleNext(null, $this->dispatchRequest());
+        return $next($this->request, $this->dispatchRequest());
     }
 
     protected function getOptionNameSpace()
@@ -145,6 +131,6 @@ class Dispatcher implements MiddlewareInterface
     protected function getTargetConfigurableObject()
     {
 
-        return $this->_app;
+        return $this->app;
     }
 }
