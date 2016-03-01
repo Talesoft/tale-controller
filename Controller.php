@@ -2,6 +2,7 @@
 
 namespace Tale;
 
+use Tale\Config\DelegateTrait;
 use Tale\Controller\Dispatcher;
 use Tale\Http\Method;
 use Tale\Http\Runtime\MiddlewareInterface;
@@ -10,6 +11,7 @@ use Tale\Http\Runtime\MiddlewareTrait;
 class Controller implements MiddlewareInterface
 {
     use MiddlewareTrait;
+    use DelegateTrait;
 
     private $_app;
     private $_dispatcher;
@@ -54,15 +56,15 @@ class Controller implements MiddlewareInterface
 
         $req = $this->getRequest();
         $action = $req->getAttribute('action', $this->_app->getOption(
-            'controller.defaultAction',
+            'defaultAction',
             'index'
         ));
         $id = $req->getAttribute('id', $this->_app->getOption(
-            'controller.defaultId',
+            'defaultId',
             null
         ));
         $format = $req->getAttribute('format', $this->_app->getOption(
-            'controller.defaultFormat',
+            'defaultFormat',
             'html'
         ));
 
@@ -72,12 +74,12 @@ class Controller implements MiddlewareInterface
             || (!is_null($id) && !is_numeric($id) && Inflector::canonicalize($id) !== $id))
             return $this->handleNext();
 
-        $getActionPattern = $this->_app->getOption('controller.getActionPattern', 'get%sAction');
-        $getActionInflection = $this->_app->getOption('controller.getActionInflection', [Inflector::class, 'camelize']);
-        $postActionPattern = $this->_app->getOption('controller.postActionPattern', 'post%sAction');
-        $postActionInflection = $this->_app->getOption('controller.postActionInflection', [Inflector::class, 'camelize']);
-        $actionPattern = $this->_app->getOption('controller.actionPattern', '%sAction');
-        $actionInflection = $this->_app->getOption('controller.actionInflection', [Inflector::class, 'variablize']);
+        $getActionPattern = $this->_app->getOption('getActionPattern', 'get%sAction');
+        $getActionInflection = $this->_app->getOption('getActionInflection', [Inflector::class, 'camelize']);
+        $postActionPattern = $this->_app->getOption('postActionPattern', 'post%sAction');
+        $postActionInflection = $this->_app->getOption('postActionInflection', [Inflector::class, 'camelize']);
+        $actionPattern = $this->_app->getOption('actionPattern', '%sAction');
+        $actionInflection = $this->_app->getOption('actionInflection', [Inflector::class, 'variablize']);
 
         $getMethodName = sprintf($getActionPattern, call_user_func($getActionInflection, $action));
         $postMethodName = sprintf($postActionPattern, call_user_func($postActionInflection, $action));
@@ -104,5 +106,17 @@ class Controller implements MiddlewareInterface
             return $result;
 
         return $this->handleNext();
+    }
+
+    protected function getOptionNameSpace()
+    {
+
+        return 'controller';
+    }
+
+    protected function getTargetConfigurableObject()
+    {
+
+        return $this->_app;
     }
 }

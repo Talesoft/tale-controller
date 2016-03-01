@@ -5,6 +5,7 @@ namespace Tale\Controller;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Tale\App;
+use Tale\Config\DelegateTrait;
 use Tale\Controller;
 use Tale\Http\Runtime\MiddlewareInterface;
 use Tale\Http\Runtime\MiddlewareTrait;
@@ -14,6 +15,7 @@ use Tale\Loader;
 class Dispatcher implements MiddlewareInterface
 {
     use MiddlewareTrait;
+    use DelegateTrait;
 
     private $_app;
 
@@ -29,18 +31,6 @@ class Dispatcher implements MiddlewareInterface
     public function getApp()
     {
         return $this->_app;
-    }
-
-    protected function getOptionNameSpace()
-    {
-
-        return 'controller';
-    }
-
-    public function getOption($key, $defaultValue = null)
-    {
-
-        return $this->_app->getOption($this->getOptionNameSpace().".$key", $defaultValue);
     }
 
     public function dispatchRequest(ServerRequestInterface $request = null, ResponseInterface $response = null)
@@ -92,7 +82,7 @@ class Dispatcher implements MiddlewareInterface
 
             $loaderEnabled = $this->getOption('loader.enabled', false);
             $loaderPath = $this->getOption('loader.path', getcwd().'/controllers');
-            $loaderPattern = $this->getOption('loader.fileNamePattern', null);
+            $loaderPattern = $this->getOption('loader.pattern', null);
             $loader = null;
 
             if ($loaderEnabled) {
@@ -146,4 +136,15 @@ class Dispatcher implements MiddlewareInterface
         return $this->handleNext(null, $this->dispatchRequest());
     }
 
+    protected function getOptionNameSpace()
+    {
+
+        return 'controller';
+    }
+
+    protected function getTargetConfigurableObject()
+    {
+
+        return $this->_app;
+    }
 }
